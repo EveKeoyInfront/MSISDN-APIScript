@@ -2,10 +2,10 @@ const { getAccessToken } = require('./auth');
 const axios = require("axios");
 require('dotenv').config();
 
-const BASE_URL = process.env.MOLI_BASE_URL;
+const MOLI_BASE_URL = process.env.MOLI_BASE_URL;
 const ACCOUNT_BASE_URL = process.env.ACCOUNT_BASE_URL;
 
-const fetchApiStatus = async (msisdn, telco, id) => {
+const allStatus = async (msisdn, telco, id) => {
   const results = { msisdn , telco, id };
 
   let token;
@@ -13,16 +13,13 @@ const fetchApiStatus = async (msisdn, telco, id) => {
     token = await getAccessToken(); 
   } catch (error) {
     console.error("❌ Failed to fetch token:", error.message);
-    results.getCustomerResponse = "❌ Token Error";
-    results.getSubscriber = "❌ Token Error";
-    results.getFamilyGroup = "❌ Token Error";
     return results; 
   }
 
-  // getCustomer
+  // GET Customer
   try {
     const getCustomerParams = new URLSearchParams({ msisdn });
-    const getCustomerURL = `${BASE_URL}/moli-customer/v3/customer?${getCustomerParams.toString()}`;    
+    const getCustomerURL = `${MOLI_BASE_URL}/moli-customer/v3/customer?${getCustomerParams.toString()}`;    
     
     const getCustomerResponse = await axios.get(getCustomerURL, {
       headers: {
@@ -32,12 +29,12 @@ const fetchApiStatus = async (msisdn, telco, id) => {
     });
 
     // console.log('🛠️ getCustomer Payload:', getCustomerResponse?.data);
-    const customerId = getCustomerResponse?.data?.[0]?.personalInfo?.[0]?.identification?.[0]?.idNo || 'N/A';
-    console.log(`✅ getCustomer: ${getCustomerResponse.status} ID:${customerId}`);
+    const idNo = getCustomerResponse?.data?.[0]?.personalInfo?.[0]?.identification?.[0]?.idNo || 'N/A';
+    console.log(`✅ getCustomer: ${getCustomerResponse.status} idNo:${idNo}`);
 
     results.getCustomer = {
       httpStatus: `✅ ${getCustomerResponse.status}`,
-      ID: (customerId || "Null"),
+      idNo: (idNo || "Null"),
     };
 
   } catch (error) {
@@ -47,10 +44,10 @@ const fetchApiStatus = async (msisdn, telco, id) => {
     results.getCustomer = `❌ ${statusCode}`;
   }
 
-  // getSubscriber
+  // GET Subscriber
   try {
     const subscriberParams = new URLSearchParams({ msisdn, telco });
-    const subscriberURL = `${BASE_URL}/moli-subscriber/v1/subscriber?${subscriberParams.toString()}`;    
+    const subscriberURL = `${MOLI_BASE_URL}/moli-subscriber/v1/subscriber?${subscriberParams.toString()}`;    
     
     const subscriberResponse = await axios.get(subscriberURL, {
       headers: {
@@ -90,7 +87,7 @@ const fetchApiStatus = async (msisdn, telco, id) => {
     results.getSubscriber = `❌ ${statusCode}`;
   }
   
-  // getFamilyGroup
+  // GET FamilyGroup
   try {     
     const familyGroupURL = `${ACCOUNT_BASE_URL}/v1/family-group/${msisdn}`;
     
@@ -109,61 +106,77 @@ const fetchApiStatus = async (msisdn, telco, id) => {
     results.getFamilyGroup = `❌ ${statusCode}`;
   }
 
-  //getAccountStructure
-  try {     
-    const accountStructureURL = `${ACCOUNT_BASE_URL}/moli-account/v1/family-group/${msisdn}`;
-    const AccountStructureResponse = await axios.get(accountStructureURL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
+  // GET AccountStructure
+  // BUGGY. MOLI TEAM IS FIXING
+  // const level = "customer"; //account,subscriber
 
-    console.log('🛠️ accountStructure Payload:', AccountStructureResponse?.data);
+  // const accountStructureParams = new URLSearchParams({ level },{ msisdn });
+  // const accountStructureURL = `${ACCOUNT_BASE_URL}/moli-customer/v3/customer?${accountStructureParams.toString()}`;    
+  // const accountStructureResponse = await axios.get(accountStructureURL, {
+  //       Authorization: `Bearer ${token}`,
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
 
-    console.log(`✅ accountStructure: ${AccountStructureResponse.status}`);
-    results.accountStructure = `✅ ${AccountStructureResponse.status}`;
+  // //OR
 
-  } catch (error) {
-    const statusCode = error.response?.status || "Unknown Status";
-    const errorMessage = error.response?.data?.message || error.message || "Unknown Error";
-    console.error(`❌ accountStructure: Status - ${statusCode}, Error - ${errorMessage}`);
-    results.accountStructure = `❌ ${statusCode}`;
-  }
+  // try {     
+  //   const accountStructureURL = `${ACCOUNT_BASE_URL}/moli-account/v1/family-group/${ level }${ msisdn }`;
+  //   const AccountStructureResponse = await axios.get(accountStructureURL, {
+  //     headers: {
+  //       Authorization: `Bearer ${token}`,
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
+
+  //   console.log(accountStructureURL);
+  //   console.log('🛠️ accountStructure Payload:', AccountStructureResponse?.data);
+
+  //   console.log(`✅ accountStructure: ${AccountStructureResponse.status}`);
+  //   results.accountStructure = `✅ ${AccountStructureResponse.status}`;
+
+  // } catch (error) {
+  //   const statusCode = error.response?.status || "Unknown Status";
+  //   const errorMessage = error.response?.data?.message || error.message || "Unknown Error";
+  //   console.error(`❌ accountStructure: Status - ${statusCode}, Error - ${errorMessage}`);
+  //   results.accountStructure = `❌ ${statusCode}`;
+  // }
 
   
-  //getAccountStructure-WithID
-  try {     
-    const level = "customer";
-    const idType = "NRIC";
-    const accountStructureParams = new URLSearchParams({ level, idType, msisdn });
-    const accountStructureURL = `${BASE_URL}/moli-account/v2/accounts/structure?${accountStructureParams.toString()}`;
-    console.log(accountStructureURL);
+  // GET AccountStructure-WithID
+  // BUGGY. MOLI TEAM IS FIXING
+  // try {     
+  //   const level = "customer"; //account,subscriber
+  //   const idType = "NRIC"; //passport,mytentera
+  //   const idNo = idNo;
+  //   const accountStructureIdParams = new URLSearchParams({ level, idType, idNo });
+  //   const accountStructureIdURL = `${MOLI_BASE_URL}/moli-account/v2/accounts/structure?${accountStructureIdParams.toString()}`;
 
-    const AccountStructureResponse = await axios.get(accountStructureURL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
+  //   const AccountStructureIdResponse = await axios.get(AccountStructureIdResponse, {
+  //     headers: {
+  //       Authorization: `Bearer ${token}`,
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
 
-    console.log('🛠️ accountStructure Payload:', AccountStructureResponse?.data);
-    console.log(`✅ accountStructure: ${AccountStructureResponse.status}`);
-    results.accountStructure = `✅ ${AccountStructureResponse.status}`;
+  //   console.log(accountStructureIdURL)
+  //   console.log('🛠️ accountStructure Payload:', AccountStructureIdResponse?.data);
+  //   console.log(`✅ accountStructureID: ${AccountStructureIdResponse.status}`);
+  //   results.accountStructureId = `✅ ${AccountStructureIdResponse.status}`;
 
-  } catch (error) {
-    const statusCode = error.response?.status || "Unknown Status";
-    const errorMessage = error.response?.data?.message || error.message || "Unknown Error";
-    console.error(`❌ accountStructure: Status - ${statusCode}, Error - ${errorMessage}`);
-    results.accountStructure = `❌ ${statusCode}`;
-  }
+  // } catch (error) {
+  //   const statusCode = error.response?.status || "Unknown Status";
+  //   const errorMessage = error.response?.data?.message || error.message || "Unknown Error";
+  //   console.error(`❌ accountStructureID: Status - ${statusCode}, Error - ${errorMessage}`);
+  //   results.accountStructureId = `❌ ${statusCode}`;
+  // }
 
-  //getValidateSIM
+  // GET ValidateSIM
   try {
     const iccid = "896019210635472956";
     const storeId = "S0001940641";
     const ValidateSIMParams = new URLSearchParams({ msisdn, telco, iccid, storeId });
-    const ValidateSIMURL = `${BASE_URL}/moli-sim/v2/sim/validation?${ValidateSIMParams.toString()}`;
+    const ValidateSIMURL = `${MOLI_BASE_URL}/moli-sim/v2/sim/validation?${ValidateSIMParams.toString()}`;
       
     const ValidateSIMResponse = await axios.get(ValidateSIMURL, {
       headers: {
@@ -193,4 +206,4 @@ const fetchApiStatus = async (msisdn, telco, id) => {
   return results;
 };
 
-module.exports = { fetchApiStatus };
+module.exports = { allStatus };
